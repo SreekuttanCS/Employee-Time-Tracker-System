@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+.admin_button button {
+    background-color: #072560;
+    border: none;
+    color: white;
+}
+body {
+    font-family: 'Inter', sans-serif;
+    background: #f7f7f7;
+}
+.bold_title {
+    font-weight: bold;
+}
+.button_group button {
+    font-size: 14px;
+}
+.card {
+    border: none;
+    box-shadow: 0 0 15px 1px rgba(0, 0, 0, 0.1);
+}
+.container-fluid {
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+}
+.custom_font1 {
+    font-size: 30px;
+}
+.custom_font2 {
+    font-size: 15px;
+}
+.emp_button button {
+    background-color: #dddddd9f;
+    border: none;
+}
+.footer_title {
+    font-size: 11px;
+}
+.header_title {
+    font-size: 3.0rem;
+    line-height: 3.1rem;
+}
+.left_panel {
+    background-color: #072560;
+    color: white;
+}
+.left_panel img {
+    width: 80px;
+    height: 80px;
+}
+.left_panel, .right_panel {
+    height: auto;
+}
+.right_panel {
+    background-color: white;
+}
+.shadow_container {
+    box-shadow: 0 0 15px 1px rgba(0, 0, 0, 0.1);
+}
+.white_container {
+    background-color: white;
+    border-radius: 10px;
+    padding: 10px;
+}
