@@ -1,85 +1,85 @@
-<?php 
+<?php
+    // Include the database connection file
     include_once __DIR__ . '/../php/connection.php';
 
-    $date_picked = ($_POST['table_date']);
-    $date_picked = mysqli_real_escape_string($conn, $date_picked);
-    $sql = "SELECT atlog.emp_id, employee.first_name, employee.middle_name, employee.last_name, employee.shift, employee.contract, atlog.am_in, atlog.am_out, atlog.pm_in, atlog.pm_out, atlog.am_late, atlog.pm_late, atlog.am_underTIME, atlog.pm_underTIME, atlog.work_hour, atlog.overtime
-    FROM atlog
-    JOIN employee ON atlog.emp_id = employee.emp_id
-    WHERE atlog.atlog_DATE = '$date_picked';";
+    // Get the selected date from the POST request and sanitize it
+    if (isset($_POST['table_date'])) {
+        $date_picked = mysqli_real_escape_string($conn, $_POST['table_date']);
+    } else {
+        $date_picked = date('Y-m-d');  // Default to today's date if no date is picked
+    }
 
-    $result = mysqli_query($conn,$sql);
-    
-    if (mysqli_num_rows($result) > 0){
+    // Prepare the SQL statement
+    $stmt = $conn->prepare("SELECT 
+            atlog.emp_id, 
+            employee.first_name, 
+            employee.middle_name, 
+            employee.last_name, 
+            employee.shift, 
+            employee.contract, 
+            DATE_FORMAT(atlog.check_in, '%H:%i:%s') AS check_in, 
+            DATE_FORMAT(atlog.check_out, '%H:%i:%s') AS check_out, 
+            atlog.work_hour, 
+            atlog.overtime_hour, 
+             employee.total_work_hours,
+            atlog.status, 
+            atlog.late_hours
+        FROM 
+            atlog
+        JOIN 
+            employee ON atlog.emp_id = employee.emp_id
+        WHERE 
+            atlog.atlog_DATE = ?");
+   
+    // Bind the date parameter
+    $stmt->bind_param("s", $date_picked); // "s" denotes that the parameter is a string
+   
+    // Execute the query
+    $stmt->execute();
+   
+    // Get the result
+    $result = $stmt->get_result();
+
+    // Check if any records were returned
+    if ($result->num_rows > 0) {
+        // Output the table headers
         echo "
         <thead>
-        <tr>
-            <th scope='col'>Emp ID</th>
-            <th scope='col'>Full Name</th>
-            <th scope='col'>Contract</th>
-            <th scope='col'>Shift</th>
-            <th scope='col'>AM IN</th>
-            <th scope='col'>AM OUT</th>
-            <th scope='col'>PM IN</th>
-            <th scope='col'>PM OUT</th>
-            <th scope='col'>Work Hours</th>
-            <th scope='col'>Overtime</th>
-        </tr>
+            <tr>
+                <th scope='col'>Emp ID</th>
+                <th scope='col'>Full Name</th>
+                <th scope='col'>Contract</th>
+                <th scope='col'>Shift</th>
+                <th scope='col'>Check In</th>
+                <th scope='col'>Check Out</th>
+                <th scope='col'>Work Hours</th>
+                <th scope='col'>Overtime</th>
+                <th scope='col'>Total Work Hour</th>
+                <th scope='col'>Status</th>
+                <th scope='col'>Late Hours</th>
+            </tr>
         </thead>
-        ";
-        while ($row = mysqli_fetch_assoc($result)){
-            echo "<tbody class='table_body'>";
+        <tbody>";
+
+        // Fetch and display each record
+        while ($row = $result->fetch_assoc()) {
             echo "<tr>";
             echo "<td>" . $row["emp_id"] . "</td>";
             echo "<td>" . $row["first_name"] . " " . $row["middle_name"] . " " . $row["last_name"] . "</td>";
             echo "<td>" . $row["contract"] . "</td>";
             echo "<td>" . $row["shift"] . "</td>";
-            if($row["am_in"]==null){
-                echo "<td>-</td>";
-                }
-            elseif($row["am_late"] == "YES"){
-                echo "<td style='color:red'>" . $row["am_in"] . "</td>";
-                echo "<script>console.log('" . $row["am_in"] . "')</script>";
-            } else{
-                echo "<td>" . $row["am_in"] . "</td>";
-            }
-
-            if($row["am_out"]==null){
-                echo "<td>-</td>";
-                }
-            elseif($row["am_underTIME"]== "YES"){
-                echo "<td style='color:blue'>" . $row["am_out"] . "</td>";
-            } else{
-                echo "<td>" . $row["am_out"] . "</td>";
-            }
-
-            if($row["pm_in"]==null){
-                echo "<td>-</td>";
-                }
-            elseif($row["pm_late"] == "YES"){
-                echo "<td style='color:red'>" . $row["pm_in"] . "</td>";
-            } else{
-                echo "<td>" . $row["pm_in"] . "</td>";
-            }
-            
-            if($row["pm_out"]==null){
-                echo "<td>-</td>";
-                }
-            elseif($row["pm_underTIME"]== "YES"){
-                echo "<td style='color:blue'>" . $row["pm_out"] . "</td>";
-            } else {
-                echo "<td>" . $row["pm_out"] . "</td>";
-            }
-            if($row["overtime"] > "00:00:00"){
-                echo "<td style='color:green'>" . $row["work_hour"] . "</td>";
-            } else {
-                echo "<td>" . $row["work_hour"] . "</td>";
-            }
-            echo "<td>" . $row["overtime"] . "</td>";
+            echo "<td>" . ($row["check_in"] ? $row["check_in"] : "-") . "</td>";
+            echo "<td>" . ($row["check_out"] ? $row["check_out"] : "-") . "</td>";
+            echo "<td>" . $row["work_hour"] . "</td>";
+            echo "<td>" . $row["overtime_hour"] . "</td>";
+            echo "<td>" . $row["total_work_hours"] . "</td>";
+            echo "<td>" . $row["status"] . "</td>";
+            echo "<td>" . $row["late_hours"] . "</td>";
             echo "</tr>";
-            echo "</tbody>";
         }
+
+        echo "</tbody>";
     } else {
-        echo "<div class='alert alert-danger m-0 p-3' role='alert'>No Records Found</div>";
+        echo "<tr><td colspan='10' class='text-center'>No Records Found for the selected date</td></tr>";
     }
 ?>

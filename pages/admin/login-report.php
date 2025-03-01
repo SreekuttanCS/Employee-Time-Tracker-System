@@ -1,48 +1,95 @@
 <?php
-    // Start the session
-    session_start();
-    include_once __DIR__ . '/../php/update.php';
+// Start the session
+session_start();
+include_once __DIR__ . '/../php/connection.php';
 
-    include_once __DIR__ . '/../php/connection.php';
+// Check if admin_id is set in the session
+if (isset($_SESSION['admin_id'])) {
+    $adminId = $_SESSION['admin_id'];
 
-    // Check if admin_id is set in the session
-    if (isset($_SESSION['admin_id'])) {
-        $adminId = $_SESSION['admin_id']; 
+    $adminUsernameQuery = "SELECT username FROM admin WHERE admin_id = $adminId";
 
-        $adminUsernameQuery = "SELECT username FROM admin WHERE admin_id = $adminId";
-        
-        $adminResult = $conn->query($adminUsernameQuery);
+    $adminResult = $conn->query($adminUsernameQuery);
 
-        // Check if admin entry is found
-        if ($adminResult->num_rows > 0) {
-            $adminRow = $adminResult->fetch_assoc();
-            $adminUsername = $adminRow['username'];
-        } else {
-            echo '<script>console.log("No admin entry found");</script>';
-        
-            $adminUsername = ''; 
-        }
+    // Check if admin entry is found
+    if ($adminResult->num_rows > 0) {
+        $adminRow = $adminResult->fetch_assoc();
+        $adminUsername = $adminRow['username'];
     } else {
-        echo '<script>console.log("Admin ID not set in the session");</script>';
-        $adminUsername = ''; 
+        echo '<script>console.log("No admin entry found");</script>';
+        $adminUsername = '';
     }
+} else {
+    $adminUsername = '';
+}
 
-    // Query to get the count of online employees
-    $sql = "SELECT COUNT(*) AS online_employees_count 
-    FROM atlog 
-    WHERE status = 'online'";
+// Query to get the count of online employees
+$sql = "SELECT COUNT(*) AS online_employees_count 
+FROM atlog 
+WHERE status = 'online'";
 
-    $result = mysqli_query($conn, $sql);
+$result = mysqli_query($conn, $sql);
 
-    // Check if the query was successful
-    if ($result) {
-        $row = mysqli_fetch_assoc($result);
-        $onlineEmployeesCount = $row['online_employees_count'];
-    } else {
-        $onlineEmployeesCount = 0; // Default value if there's an error
+// Check if the query was successful
+if ($result) {
+    $row = mysqli_fetch_assoc($result);
+    $onlineEmployeesCount = $row['online_employees_count'];
+} else {
+    $onlineEmployeesCount = 0; // Default value if there's an error
+}
+
+// SQL query to fetch attendance data for today's date
+$sql = "SELECT 
+            atlog.emp_id, 
+            employee.contract, 
+            employee.shift, 
+            employee.first_name, 
+            employee.middle_name, 
+            employee.last_name, 
+            atlog.check_in, 
+            atlog.check_out, 
+            atlog.work_hour, 
+            atlog.overtime_hour, 
+            employee.total_work_hours,
+            atlog.status,
+            atlog.late_hours
+        FROM atlog 
+        JOIN employee ON atlog.emp_id = employee.emp_id
+        WHERE atlog.atlog_DATE = CURDATE()";
+
+$result = mysqli_query($conn, $sql);
+$result_check = mysqli_num_rows($result);
+
+$conn->close();
+
+// Function to convert decimal hours to HH:MM:SS format
+function convertToTimeFormat($decimalHours) {
+    if (!is_numeric($decimalHours)) return '00:00:00'; // handle invalid value
+
+    $hours = floor($decimalHours);
+    $minutes = floor(($decimalHours - $hours) * 60);
+    $seconds = floor(($decimalHours - $hours - ($minutes / 60)) * 3600);
+
+    return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+}
+
+// Function to calculate overtime (if any)
+function calculateOvertime($workHour, $totalWorkHours) {
+    // If workHour exceeds totalWorkHours, calculate overtime
+    if ($workHour > $totalWorkHours) {
+        // Calculate the overtime (difference between work hours and total work hours)
+        $overtimeDuration = $workHour - $totalWorkHours;
+
+        // Convert the overtime into hours, minutes, and seconds
+        $overtimeHours = floor($overtimeDuration);
+        $overtimeMinutes = floor(($overtimeDuration - $overtimeHours) * 60);
+        $overtimeSeconds = floor(($overtimeDuration - $overtimeHours - ($overtimeMinutes / 60)) * 3600);
+
+        return sprintf('%02d:%02d:%02d', $overtimeHours, $overtimeMinutes, $overtimeSeconds);
     }
-
-    $conn->close();
+    // If no overtime, return a dash
+    return "-";
+}
 ?>
 
 <!DOCTYPE html>
@@ -71,7 +118,7 @@
                     <p class="header_title">Welcome <span class="admin_name" id="admin_name"><?php echo htmlspecialchars($adminUsername); ?></span>!</p>
                 </div>
                 <div class="col col-auto">
-                        <input id="exportButton" class="btn btn-secondary m-0" disabled value="Online Employees: <?php echo $onlineEmployeesCount; ?>"></input>
+                    <input id="exportButton" class="btn btn-secondary m-0" disabled value="Online Employees: <?php echo $onlineEmployeesCount; ?>"></input>
                 </div>
             </div>
             
@@ -104,16 +151,6 @@
             <div class="white_container row mt-3 p-4 mx-0 text-center justify-content-evenly">
                 <table class="table m-0 p-0">
                     <?php
-                        include ('../php/connection.php');
-
-                        $sql = "SELECT atlog.work_hour,atlog.emp_id, employee.contract, employee.shift, employee.first_name, employee.middle_name, employee.last_name, employee.shift, atlog.am_in, atlog.am_out, atlog.pm_in, atlog.pm_out, atlog.am_late, atlog.pm_late, atlog.am_underTIME, atlog.pm_underTIME, atlog.work_hour, atlog.overtime, atlog.status
-                        FROM atlog 
-                        JOIN employee ON atlog.emp_id = employee.emp_id
-                        WHERE  atlog.atlog_DATE = CURDATE()";
-
-                        $result = mysqli_query($conn, $sql);
-                        $result_check = mysqli_num_rows($result);
-
                         if ($result_check > 0) {
                             echo "
                             <thead>
@@ -122,82 +159,66 @@
                                     <th scope='col'>Full Name</th>
                                     <th scope='col'>Contract</th>
                                     <th scope='col'>Shift</th>
-                                    <th scope='col'>AM In</th>
-                                    <th scope='col'>AM Out</th>
-                                    <th scope='col'>PM In</th>
-                                    <th scope='col'>PM Out</th>
+                                    <th scope='col'>Check In</th>
+                                    <th scope='col'>Check Out</th>
                                     <th scope='col'>Work Hours</th>
                                     <th scope='col'>Overtime</th>
+                                    <th scope='col'>Total Work Hours</th>
                                     <th scope='col'>Status</th>
+                                    <th scope='col'>Late Hours</th>
                                 </tr>
                             </thead>
                             <tbody class='table_body'>
                             ";
                             while ($row = mysqli_fetch_assoc($result)){
+                                // Initialize variables for work hours and overtime
+                                $workHour = 0;
+                                $overtime = "-";  // Default overtime as dash
+                                $lateHours = 0;
+
+                                // Check if both check-in and check-out times exist
+                                if ($row['check_in'] && $row['check_out']) {
+                                    // Convert check-in and check-out times to DateTime objects
+                                    $checkInTime = new DateTime($row['check_in']);
+                                    $checkOutTime = new DateTime($row['check_out']);
+
+                                    // Calculate the work duration between check-in and check-out
+                                    $workDuration = $checkInTime->diff($checkOutTime);
+
+                                    // Calculate work hours as decimal (total hours and minutes)
+                                    $workHour = $workDuration->h + ($workDuration->i / 60);  // works in hours (decimal)
+                                }
+
+                                // Ensure total_work_hours is a valid numeric value (i.e., integer or float)
+                                $totalWorkHours = is_numeric($row['total_work_hours']) ? floatval($row['total_work_hours']) : 0;
+
+                                // Calculate overtime using the function
+                                $overtime = calculateOvertime($workHour, $totalWorkHours);
+
+                                // Display the row with the calculated values
                                 echo "<tr>";
                                 echo "<td>" . $row["emp_id"] . "</td>";
                                 echo "<td>" . $row["first_name"] . " " . $row["middle_name"] . " " . $row["last_name"] . "</td>";
                                 echo "<td>" . $row["contract"] . "</td>";
                                 echo "<td>" . $row["shift"] . "</td>";
-
-                                if($row["am_in"]==null){
-                                    echo "<td>-</td>";
-                                    }
-                                elseif($row["am_late"] == "YES"){
-                                    echo "<td style='color:red'>" . $row["am_in"] . "</td>";
-                                    echo "<script>console.log('" . $row["am_in"] . "')</script>";
-                                } else{
-                                    echo "<td>" . $row["am_in"] . "</td>";
-                                }
-                    
-                                if($row["am_out"]==null){
-                                    echo "<td>-</td>";
-                                    }
-                                elseif($row["am_underTIME"]== "YES"){
-                                    echo "<td style='color:blue'>" . $row["am_out"] . "</td>";
-                                } else{
-                                    echo "<td>" . $row["am_out"] . "</td>";
-                                }
-                    
-                                if($row["pm_in"]==null){
-                                    echo "<td>-</td>";
-                                    }
-                                elseif($row["pm_late"] == "YES"){
-                                    echo "<td style='color:red'>" . $row["pm_in"] . "</td>";
-                                } else{
-                                    echo "<td>" . $row["pm_in"] . "</td>";
-                                }
-                                
-                                if($row["pm_out"]==null){
-                                    echo "<td>-</td>";
-                                    }
-                                elseif($row["pm_underTIME"]== "YES"){
-                                    echo "<td style='color:blue'>" . $row["pm_out"] . "</td>";
-                                } else {
-                                    echo "<td>" . $row["pm_out"] . "</td>";
-                                }
-                                if($row["overtime"] > "00:00:00"){
-                                    echo "<td style='color:green'>" . $row["work_hour"] . "</td>";
-                                } else {
-                                    echo "<td>" . $row["work_hour"] . "</td>";
-                                }
-                                echo "<td>" . $row["overtime"] . "</td>";
-                                echo "<td>" . $row["status"] . "</td>";
+                                echo "<td>" . ($row["check_in"] ? $row["check_in"] : '-') . "</td>";
+                                echo "<td>" . ($row["check_out"] ? $row["check_out"] : '-') . "</td>";
+                                echo "<td>" . ($workHour ? convertToTimeFormat($workHour) : '-') . "</td>";
+                                echo "<td>" . $overtime . "</td>";  // Show overtime or dash if no overtime
+                                echo "<td>" . ($row["total_work_hours"] ? $row["total_work_hours"] : '-') . "</td>";
+                                echo "<td>" . ($row["status"] ? $row["status"] : '-') . "</td>";
+                                echo "<td>" . ($lateHours ? convertToTimeFormat($lateHours) : '-') . "</td>";
                                 echo "</tr>";
-                                
                             }
                             echo "</tbody>";
                         } else {
-                            echo "
-                            <div class='alert alert-danger m-0 p-3' role='alert'>
-                            No Records Found
-                            </div>";
-                        }          
-                        $conn->close();
+                            echo "<tr><td colspan='11'>No data available for today.</td></tr>";
+                        }
                     ?>
                 </table>
-            </div>    
+            </div>
         </div>
     </div>
 </body>
 </html>
+                        
