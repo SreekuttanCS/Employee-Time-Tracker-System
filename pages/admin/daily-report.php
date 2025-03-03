@@ -21,40 +21,32 @@
     <script src="../js/full-calendar.js" defer></script>
 
     <script>
-        // Ensure all DOM elements are loaded before executing JavaScript
         document.addEventListener('DOMContentLoaded', function () {
-            // Load table data for the current day
             var today = new Date().toISOString().slice(0, 10); // Current date in yyyy-mm-dd format
             $("#table_main").load("load-rows.php", {
                 table_date: today
             });
 
-            // Search by date (when 'Search' button is clicked)
             $("#search_button").click(function() {
                 var date_picked = document.getElementById('picked_date').value;
                 $("#table_main").load("load-rows.php", {
                     table_date: date_picked
                 });
-                // Update date label based on the selection
                 $("#selected_date").text(date_picked);
                 $("#current_date").hide();
                 $("#date_picked").show();
             });
 
-            // Export table to PDF
             document.getElementById('exportButton').addEventListener('click', function() {
-                const selectedDate = document.getElementById('selected_date').innerHTML; // Get the selected date
-                const currentDate = document.getElementById('full_date').innerHTML; // Get the current date
-
-                let fileName = 'daily_report'; // Default file name
-                let finalDate = selectedDate || currentDate; // Use selected date if available
+                const selectedDate = document.getElementById('selected_date').innerHTML;
+                const currentDate = document.getElementById('full_date').innerHTML;
+                let fileName = 'daily_report';
+                let finalDate = selectedDate || currentDate;
 
                 const pdf = new jsPDF();
                 const contentDiv = document.getElementById('table_main');
 
-                // Column widths (adjust to your needs)
-                const columnWidths = [20, 20, 20, 20, 20, 20, 20, 20, 20, 20]; // Define column widths for 10 columns in the table
-
+                const columnWidths = [20, 20, 20, 20, 20, 20, 20, 20]; // Define column widths for 8 columns
                 pdf.autoTable({
                     html: contentDiv,
                     startX: 0,
@@ -68,14 +60,12 @@
                         4: { cellWidth: columnWidths[4], halign: 'center' },
                         5: { cellWidth: columnWidths[5], halign: 'center' },
                         6: { cellWidth: columnWidths[6], halign: 'center' },
-                        7: { cellWidth: columnWidths[7], halign: 'center' },
-                        8: { cellWidth: columnWidths[8], halign: 'center' },
-                        9: { cellWidth: columnWidths[9], halign: 'center' }
+                        7: { cellWidth: columnWidths[7], halign: 'center' }
                     },
                     headerStyles: {
                         fillColor: [7, 37, 96],
                         textColor: [255, 255, 255],
-                        halign: 'center' // Center align for the header cells
+                        halign: 'center' // Center align for header cells
                     },
                     columns: [
                         { title: "Emp ID", dataKey: "emp_id" },
@@ -85,15 +75,12 @@
                         { title: "Check In", dataKey: "check_in" },
                         { title: "Check Out", dataKey: "check_out" },
                         { title: "Work Hours", dataKey: "work_hours" },
-                        { title: "Overtime", dataKey: "overtime" },
-                        { title: "Status", dataKey: "status" },
-                        { title: "Late Hours", dataKey: "late_hours" }
+                        { title: "Overtime", dataKey: "overtime" }
                     ]
                 });
 
-                // Add the title for the PDF (with selected or current date)
                 pdf.text(finalDate + ' Daily Report', 15, 15);
-                pdf.save(fileName + '.pdf'); // Save the PDF with the constructed file name
+                pdf.save(fileName + '.pdf');
             });
         });
     </script>
@@ -103,7 +90,6 @@
         <?php 
             include('../php/nav-bar.php');
         ?>
-        <!-- Calendar modal for date selection -->
         <div class="modal fade" id="calendar_modal" tabindex="-1" aria-labelledby="calendar_label" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -123,7 +109,6 @@
             </div>
         </div>
 
-        <!-- Main contents -->
         <div class="right_panel container p-5">
             <div class="header row container-fluid align-items-center m-0 p-0 gap-2">
                 <div class="col col-10 m-0 p-0"><p class="header_title"><span class="blue_title">Daily Log in</span> Report</p></div>
@@ -132,7 +117,6 @@
                 </div>
             </div>
 
-            <!-- First row with date and clock -->
             <div class="row container-fluid mt-2 gap-3 d-flex">
                 <div class="date_container card px-4 py-2 col col-4 justify-content-center" style="display: none;" id="date_picked">
                     <p class="date_subtitle">Viewing log in reports during</p>
@@ -148,7 +132,6 @@
                     </div>
                 </div>
 
-                <!-- Real-time clock -->
                 <div class="clock_container grey_container col col-3 m-0 p-0 ms-auto">
                     <div class="clock_elements">
                         <span id="hour"></span>
@@ -160,7 +143,6 @@
                     </div>
                 </div>
 
-                <!-- Table legend -->
                 <div class="white_container col col-2 m-0 py-3 px-4">
                     <p class="legend_title text-center">Table legend</p>
                     <div class="legend_red"><i class="bi bi-square-fill"></i><span class="mx-1">Late</span></div>
@@ -169,7 +151,6 @@
                 </div>
             </div>
 
-            <!-- Table of reports -->
             <div class="white_container row mt-3 p-4 mx-0 text-center justify-content-evenly align-items-center" id="table_container">
                 <table class="table m-0 p-0" id="table_main"></table>
             </div>

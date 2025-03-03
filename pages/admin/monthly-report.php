@@ -59,6 +59,7 @@
                     <a href="monthly-report.php"><button type="button" class="btn btn-primary w-100"><i class="bi bi-arrow-clockwise"></i></button></a>
                 </div>
             </div>
+
             <!-- First row -->
             <div class="row container-fluid mt-2 gap-3 d-flex">
                 <div class="date_container card px-4 py-2 col col-4 justify-content-center" style="display: none;" id="date_picked">
@@ -78,18 +79,21 @@
                     </div>
                 </div>
             </div>
+
             <div class="white_container row mt-3 p-4 mx-0 text-center justify-content-evenly" id="table_vals"></div>
         </div>
     </div>
 
     <script>
         $(document).ready(function () {
-            // Fetch current date and update HTML elements on page load
             const today = new Date().toLocaleDateString();
             const curr = new Date();
             const month = curr.getMonth() + 1; // Get the current month
             const year = curr.getFullYear(); // Get the current year
             const global_date_pick = `${year}-${month < 10 ? '0' + month : month}`; // Format current date
+
+            // Display current month-year for reference
+            $('#month_year').text(`${year}-${month < 10 ? '0' + month : month}`);
 
             // Load table values for the current date
             $("#table_vals").load("monthly-load.php", {
@@ -102,72 +106,29 @@
                 $("#table_vals").load("monthly-load.php", {
                     select_date: date_pick,
                 });
+                $("#selected_date").text(date_pick); // Display selected date
+                $("#date_picked").show(); // Show the selected date section
+                $("#current_date").hide(); // Hide current date section
             });
-
-            // Employee search functionality
-            $("#search_ID").click(function () {
-                var employee_Id = $('#emp_search').val();
-                $("#table_vals").load("monthly-load.php", {
-                    emp_id: employee_Id,
-                    select_date: global_date_pick,
-                });
-
-                // Fetch employee info and update
-                $.post('monthly-search.php', { emp_id: employee_Id }, function (data) {
-                    updateEmployeeInfo(data);
-                }, 'json');
-            });
-
-            // Update employee info based on returned data
-            function updateEmployeeInfo(data) {
-                $('[name="emp_id"]').val(data.emp_id);
-                $('[name="first_name+middle_name+last_name"]').val(data.full_name);
-                $('[name="emp_contract"]').val(data.contract);
-                $('[name="emp_shift"]').val(data.shift);
-            }
 
             // PDF Export Functionality
             document.getElementById('exportButton').addEventListener('click', function() {
                 const selectedDate = document.getElementById('selected_date').innerText || ''; // Get the selected date
                 const currentDate = document.getElementById('month_year').innerText; // Get the current date
-                const employeeName = document.getElementById('full_name')?.value || ''; // Assuming full name is in an input field
-                
-                let fileName = selectedDate ? selectedDate : currentDate; // Default to current date if no selected date
-                if (employeeName) fileName = `${currentDate}_${employeeName}`; // Append employee name if available
 
+                let fileName = selectedDate ? selectedDate : currentDate; // Default to current date if no selected date
                 const { jsPDF } = window.jspdf; // Ensure jsPDF is correctly referenced
 
                 const pdf = new jsPDF();
-                const contentDiv = document.getElementById('table_rows');
-const tableWidth = 190; // Example table width (adjust for margins)
-const margin = { top: 20, left: 0, right: 0, bottom: 20 };
-                // Define the column widths
-                const columnWidths = [20,20, 20, 20, 20, 20, 20, 20, 20, 20]; // Replace with the desired widths for each column
+                const contentDiv = document.getElementById('table_vals');
 
                 pdf.autoTable({
                     html: contentDiv,
                     startY: 30,
                     theme: 'grid',
-                    columnStyles: {
-                        0: { cellWidth: columnWidths[0], halign: 'center' },
-                        1: { cellWidth: columnWidths[1], halign: 'center' },
-                        2: { cellWidth: columnWidths[2], halign: 'center' },
-                        3: { cellWidth: columnWidths[3], halign: 'center' },
-                        4: { cellWidth: columnWidths[4], halign: 'center' },
-                        5: { cellWidth: columnWidths[5], halign: 'center' },
-                        6: { cellWidth: columnWidths[6], halign: 'center' },
-                        7: { cellWidth: columnWidths[7], halign: 'center' },
-                        8: { cellWidth: columnWidths[8], halign: 'center' },
-                        9: { cellWidth: columnWidths[9], halign: 'center' }
-                    },tableWidth: tableWidth, // Set table width to fit the page
-    margin: margin, 
-                    headerStyles: {
-                        fillColor: [7, 37, 96],
-                        textColor: [255, 255, 255],
-                        halign: 'center' // Center align for the header cells
-                    }
+                    tableWidth: 190, // Adjust as needed
+                    margin: { top: 20, left: 0, right: 0, bottom: 20 }
                 });
-
 
                 pdf.text(`${fileName} Monthly Report`, 15, 15); // Add title
                 pdf.save(`${fileName}.pdf`); // Save the PDF with the constructed file name
