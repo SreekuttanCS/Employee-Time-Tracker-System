@@ -5,13 +5,10 @@ session_start();
 
 // Function to calculate work hours and overtime
 function calculateWorkHours($check_in, $check_out, $total_work_hours) {
-    // Initialize the results as empty
     $work_hours = "-";
     $overtime_hours = "-";
 
-    // Only proceed if both check-in and check-out are available
     if ($check_in && $check_out) {
-        // Calculate the work duration if there's a check-in and check-out time
         $check_in_time = new DateTime($check_in);
         $check_out_time = new DateTime($check_out);
         $work_duration = $check_in_time->diff($check_out_time);
@@ -40,7 +37,6 @@ function calculateWorkHours($check_in, $check_out, $total_work_hours) {
 
 // Convert time to decimal (HH:MM:SS to decimal hours)
 function convertTimeToDecimal($time) {
-    // If $time is not empty or null
     if (!empty($time)) {
         $time_parts = explode(":", $time);
         if (count($time_parts) === 3) {
@@ -52,11 +48,14 @@ function convertTimeToDecimal($time) {
     return 0; // Return 0 if invalid or empty time format
 }
 
-if (isset($_POST['emp_id'])) {
+if (isset($_POST['emp_id']) && isset($_POST['check_out'])) {
     $emp_id = $_POST['emp_id'];
+    $check_out = $_POST['check_out'];
 
     // Query to get employee check-in time and total work hours
-    $query = "SELECT check_in, atlog_DATE, total_work_hours FROM atlog INNER JOIN employee ON atlog.emp_id = employee.emp_id WHERE atlog.emp_id = ? ORDER BY atlog_DATE DESC LIMIT 1";
+    $query = "SELECT check_in, atlog_DATE, total_work_hours FROM atlog 
+              INNER JOIN employee ON atlog.emp_id = employee.emp_id 
+              WHERE atlog.emp_id = ? ORDER BY atlog_DATE DESC LIMIT 1";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("i", $emp_id);
     $stmt->execute();
@@ -67,12 +66,6 @@ if (isset($_POST['emp_id'])) {
         $check_in = $attendance['check_in'];
         $atlog_date = $attendance['atlog_DATE'];
         $total_work_hours = $attendance['total_work_hours']; // Time format (HH:MM:SS)
-
-        if (isset($_POST['check_out']) && $_POST['check_out'] !== "") {
-            $check_out = $_POST['check_out'];
-        } else {
-            $check_out = NULL;
-        }
 
         // Call the function to calculate work hours and overtime
         $attendance_data = calculateWorkHours($check_in, $check_out, $total_work_hours);
@@ -102,6 +95,6 @@ if (isset($_POST['emp_id'])) {
     $stmt->close();
     mysqli_close($conn);
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Missing employee ID!']);
+    echo json_encode(['status' => 'error', 'message' => 'Missing employee ID or check-out time!']);
 }
 ?>

@@ -30,7 +30,7 @@ function generateTableRow($row) {
     $checkOutTime = isset($row["check_out"]) ? $row["check_out_time"] : "-";
     $tableRow .= "<td>" . $checkOutTime . "</td>";
 
-    // Work Hours
+    // Work Hours (Directly fetched from the database)
     $tableRow .= "<td>";
     if ($row["work_hour"] > "00:00:00") {
         $tableRow .= "<span style='color:green'>" . $row["work_hour"] . "</span>";
@@ -39,7 +39,7 @@ function generateTableRow($row) {
     }
     $tableRow .= "</td>";
 
-    // Overtime Hours
+    // Overtime Hours (Directly fetched from the database)
     $tableRow .= "<td>";
     if ($row["overtime_hour"] > "00:00:00") {
         $tableRow .= "<span style='color:green'>" . $row["overtime_hour"] . "</span>";
@@ -70,8 +70,7 @@ if (isset($_POST['table_onload'])) {
                     atlog.check_in, 
                     atlog.check_out, 
                     TIME(atlog.check_in) AS check_in_time,
-                    TIME(atlog.check_out) AS check_out_time,
-                    TIMEDIFF(atlog.check_out, atlog.check_in) AS work_hour -- Work hour calculation
+                    TIME(atlog.check_out) AS check_out_time
             FROM atlog
             JOIN employee ON atlog.emp_id = employee.emp_id
             WHERE MONTH(atlog.atlog_DATE) = MONTH(STR_TO_DATE(?, '%m/%d/%Y'))
@@ -130,8 +129,7 @@ if (isset($_POST['select_date'])) {
                     atlog.check_in, 
                     atlog.check_out, 
                     TIME(atlog.check_in) AS check_in_time,
-                    TIME(atlog.check_out) AS check_out_time,
-                    TIMEDIFF(atlog.check_out, atlog.check_in) AS work_hour -- Work hour calculation
+                    TIME(atlog.check_out) AS check_out_time
             FROM atlog
             JOIN employee ON atlog.emp_id = employee.emp_id
             WHERE MONTH(atlog.atlog_DATE) = ? AND YEAR(atlog.atlog_DATE) = ?
@@ -191,8 +189,7 @@ if (isset($_POST['emp_id'])) {
                     atlog.check_in, 
                     atlog.check_out, 
                     TIME(atlog.check_in) AS check_in_time,
-                    TIME(atlog.check_out) AS check_out_time,
-                    TIMEDIFF(atlog.check_out, atlog.check_in) AS work_hour -- Work hour calculation
+                    TIME(atlog.check_out) AS check_out_time
             FROM atlog
             JOIN employee ON atlog.emp_id = employee.emp_id
             WHERE MONTH(atlog.atlog_DATE) = ? AND YEAR(atlog.atlog_DATE) = ? 

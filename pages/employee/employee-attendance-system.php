@@ -22,21 +22,58 @@ if (isset($_POST['action'])) {
 
     // Process check-in or check-out action
     if ($action === 'check_in') {
-        $checkInTime = date('Y-m-d H:i:s'); // Current date-time
+        $checkInTime = new DateTime(); // Current date-time as DateTime object
+        $checkInTimeFormatted = $checkInTime->format('Y-m-d H:i:s'); // Format it as string
         // Update the check-in time and set status to 'Online'
-        $updateQuery = "UPDATE atlog SET check_in = '$checkInTime', status = 'Online' WHERE atlog_id = $atlogId";
+        $updateQuery = "UPDATE atlog SET check_in = '$checkInTimeFormatted', status = 'Online' WHERE atlog_id = $atlogId";
         
         if ($conn->query($updateQuery) === TRUE) {
-            echo "<script>alert('You have successfully checked in at $checkInTime.');</script>";
+            echo "<script>alert('You have successfully checked in at $checkInTimeFormatted.');</script>";
         } else {
             echo "<script>alert('Error checking in: " . $conn->error . "');</script>";
         }
     } elseif ($action === 'check_out') {
-        $checkOutTime = date('Y-m-d H:i:s'); // Current date-time
-        $updateQuery = "UPDATE atlog SET check_out = '$checkOutTime', status = 'Offline' WHERE atlog_id = $atlogId";
+        $checkOutTime = new DateTime(); // Current date-time as DateTime object
+        $checkOutTimeFormatted = $checkOutTime->format('Y-m-d H:i:s'); // Format it as string
+        $updateQuery = "UPDATE atlog SET check_out = '$checkOutTimeFormatted', status = 'Offline' WHERE atlog_id = $atlogId";
 
         if ($conn->query($updateQuery) === TRUE) {
-            echo "<script>alert('You have successfully checked out at $checkOutTime.');</script>";
+            // Calculate work hours and overtime
+            $calculateQuery = "SELECT check_in, check_out, total_work_hours FROM atlog 
+                               INNER JOIN employee ON atlog.emp_id = employee.emp_id 
+                               WHERE atlog.atlog_id = $atlogId";
+            $calculateResult = $conn->query($calculateQuery);
+
+            if ($calculateResult->num_rows > 0) {
+                $row = $calculateResult->fetch_assoc();
+                $checkIn = $row['check_in'];
+                $checkOut = $row['check_out'];
+                $totalWorkHours = $row['total_work_hours'];
+
+                // Calculate work hours and overtime
+                $checkInTime = new DateTime($checkIn);
+                $checkOutTime = new DateTime($checkOut);
+                $workDuration = $checkInTime->diff($checkOutTime);
+                $workHours = $workDuration->h + ($workDuration->i / 60); // Work hours in decimal format
+
+                // Convert total work hours to decimal
+                $totalWorkHoursDecimal = convertTimeToDecimal($totalWorkHours);
+
+                // Calculate overtime
+                $overtimeHours = ($workHours > $totalWorkHoursDecimal) ? $workHours - $totalWorkHoursDecimal : 0;
+
+                // Format work hours and overtime
+                $formattedWorkHours = sprintf('%02d:%02d:%02d', floor($workHours), floor(($workHours - floor($workHours)) * 60), 0);
+                $formattedOvertimeHours = ($overtimeHours > 0) ? sprintf('%02d:%02d:%02d', floor($overtimeHours), floor(($overtimeHours - floor($overtimeHours)) * 60), 0) : '-';
+
+                // Update the attendance record with work hours and overtime
+                $updateWorkHoursQuery = "UPDATE atlog SET work_hour = '$formattedWorkHours', overtime_hour = '$formattedOvertimeHours' WHERE atlog_id = $atlogId";
+                if ($conn->query($updateWorkHoursQuery) === TRUE) {
+                    echo "<script>alert('You have successfully checked out at $checkOutTimeFormatted. Work Hours: $formattedWorkHours, Overtime: $formattedOvertimeHours');</script>";
+                } else {
+                    echo "<script>alert('Error updating work hours: " . $conn->error . "');</script>";
+                }
+            }
         } else {
             echo "<script>alert('Error checking out: " . $conn->error . "');</script>";
         }
@@ -96,6 +133,19 @@ if ($result->num_rows > 0) {
 
 // Close the database connection
 $conn->close();
+
+// Function to convert time to decimal
+function convertTimeToDecimal($time) {
+    if (!empty($time)) {
+        $timeParts = explode(":", $time);
+        if (count($timeParts) === 3) {
+            $hours = (int)$timeParts[0];
+            $minutes = (int)$timeParts[1];
+            return $hours + ($minutes / 60);
+        }
+    }
+    return 0; // Return 0 if invalid or empty time format
+}
 ?>
 
 <!DOCTYPE html>
@@ -177,19 +227,10 @@ $conn->close();
                 <div class="col col-3-sm p-0">
                     <div class="grey_container p-3">
                         <div class="text-center emp_title mt-2 mb-3">Employee Information</div>
-                        <form action="" class="card m-3 p-3 employee_info d-flex gap-2 justify-content-between">
-                            <div class="">
-                                <label for="emp_id" class="form-label m-0">Emp ID</label>
-                                <input class="form-control" type="text" value="<?php echo $empId; ?>" name="emp_id" disabled readonly>
-                            </div>
-                            <div class="">
-                                <label for="emp_contract" class="form-label m-0">Contract</label>
-                                <input class="form-control" type="text" value="<?php echo $employeeContract; ?>" name="emp_contract" disabled readonly>
-                            </div>
-                            <div class="">
-                                <label for="emp_shift" class="form-label m-0">Shift</label>
-                                <input class="form-control" type="text" value="<?php echo $employeeShift; ?>" name="emp_shift" disabled readonly>
-                            </div>
+                        <form action="" class="card m-3 p-3 employee_info d-flex gap-2 flex-column justify-content-center align-items-center">
+                            <div class="mb-2">Name: <?php echo $employeeFullName; ?></div>
+                            <div class="mb-2">Shift: <?php echo $employeeShift; ?></div>
+                            <div class="mb-2">Contract: <?php echo $employeeContract; ?></div>
                         </form>
                     </div>
                 </div>

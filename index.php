@@ -15,9 +15,9 @@
                 <!-- Corporation Intro -->
                 <div class="left_panel m-0 p-5 col col-6">
                     <div class="py-5 m-0">
-                        <img class="mb-4" src="pages/images/company-logo.png" alt="C597 Corporation Logo">
+                        <img class="mb-4" src="pages/images/logo.png" alt="C597 Corporation Logo">
                         <h3 class="header_title">Employee<br>Attendance<br>System</h3>
-                        <p class="footer_title mt-5">C597 Corporation | All Rights Reserved</p>
+                        <p class="footer_title mt-5">DEVINE DIGITALS</p>
                     </div>
                 </div>
                 <!-- Position selection -->

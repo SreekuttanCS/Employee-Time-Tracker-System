@@ -17,7 +17,6 @@ $stmt = $conn->prepare("SELECT
         employee.shift, 
         atlog.check_in, 
         atlog.check_out, 
-        employee.total_work_hours,
         atlog.work_hour, 
         atlog.overtime_hour
     FROM 
@@ -38,7 +37,7 @@ $result = $stmt->get_result();
 
 // Check if any records were returned
 if ($result->num_rows > 0) {
-    // Output the table headers without Status and Late Hours
+    // Output the table headers
     echo "
     <thead>
         <tr>
@@ -54,26 +53,28 @@ if ($result->num_rows > 0) {
     </thead>
     <tbody>";
 
-    // Fetch and display each record without Status and Late Hours
+    // Fetch and display each record
     while ($row = $result->fetch_assoc()) {
-        // Use the pre-calculated work hours and overtime from the database
-        $work_hours = $row['work_hour'];
-        $overtime_hours = $row['overtime_hour'];
+        $work_hours = $row['work_hour'] ?: ''; // Display as blank if not recorded
+        $overtime_hours = $row['overtime_hour'] ?: ''; // Display as blank if not recorded
+
+        $check_in = $row["check_in"] ?: ''; // Display as blank if not recorded
+        $check_out = $row["check_out"] ?: ''; // Display as blank if not recorded
 
         echo "<tr>";
         echo "<td>" . $row["emp_id"] . "</td>";
         echo "<td>" . $row["full_name"] . "</td>";
         echo "<td>" . $row["contract"] . "</td>";
         echo "<td>" . $row["shift"] . "</td>";
-        echo "<td>" . ($row["check_in"] ? $row["check_in"] : "Not Recorded") . "</td>";
-        echo "<td>" . ($row["check_out"] ? $row["check_out"] : "Not Recorded") . "</td>";
-        echo "<td>" . number_format($work_hours, 2) . "</td>";
-        echo "<td>" . number_format($overtime_hours, 2) . "</td>";
+        echo "<td>" . $check_in . "</td>";
+        echo "<td>" . $check_out . "</td>";
+        echo "<td>" . $work_hours . "</td>";
+        echo "<td>" . $overtime_hours . "</td>";
         echo "</tr>";
     }
 
     echo "</tbody>";
 } else {
-    echo "<tr><td colspan='8' class='text-center'>No Records Found for the selected date: $date_picked</td></tr>";
+    echo "<tr><td colspan='8' class='text-center'>No Records Found for the selected date: <strong>$date_picked</strong></td></tr>";
 }
 ?>
